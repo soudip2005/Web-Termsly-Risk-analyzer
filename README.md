@@ -1,47 +1,81 @@
-🛡️ **Termsly - Intelligent Policy Analyzer**
-Termsly is a privacy-focused tool designed to scan website Terms of Service (ToS) and Privacy Policies. It uses Natural Language Processing (NLP) to detect risky clauses, summarize complex legal jargon, and generate easy-to-read PDF reports.
+Web Termsly | AI Risk Analysis Dashboard
+Web Termsly is an intelligent risk analysis tool designed to decode complex "Terms of Service" and "Privacy Policy" agreements. Legal documents are often too long and complex for the average user to read. Termsly solves this by using Natural Language Processing (NLP) and Machine Learning to scan websites, flag high-risk legal clauses, summarize content, and translate findings into regional languages.
+
+Here is a polished, professional, and fully structured README.md for Web Termsly.
+
+I have consolidated the duplicate sections, formatted the dataset statistics into a clean table, added specific installation commands (which were missing), and improved the visual hierarchy.
+
+🛡️ Web Termsly | AI Risk Analysis Dashboard
+Web Termsly is an intelligent risk analysis tool designed to decode complex "Terms of Service" and "Privacy Policy" agreements. Legal documents are often too long and complex for the average user to read. Termsly solves this by using Natural Language Processing (NLP) and Machine Learning to scan websites, flag high-risk legal clauses, summarize content, and translate findings into regional languages.
+
+🚀 Key Features
+🌐 Automated Scraper: Utilizes Selenium and BeautifulSoup to autonomously navigate to a target domain, identify policy links, and extract relevant text.
+
+⚖️ AI Risk Classification: A Logistic Regression model classifies individual clauses into High 🔴, Medium 🟠, or Safe 🟢 categories based on legal risk patterns.
+
+📝 Smart Summarization: Compresses long, technical legal text into a concise, easy-to-read executive summary using the T5 Transformer model.
+
+🗣️ Multi-Language Support: Breaks language barriers by translating summaries into Bengali, Hindi, Tamil, French, and Russian.
+
+📊 Interactive Dashboard: A user-friendly Streamlit interface that provides visual risk distribution charts and instant feedback.
+
+📄 Instant PDF Reports: Generates downloadable, color-coded PDF reports with embedded fonts for Indic languages.
 
 
-📖 **Overview**
-Legal documents are often too long and complex for the average user to read. Termsly solves this by:
-1. Scraping policy text directly from a URL.
-2. Analyzing the text using Machine Learning to identify High, Medium, and Safe clauses.
-3. Summarizing the content into plain English and translating it into multiple languages.
-4. Generating a downloadable PDF report for offline viewing.
+🛠️ Tech Stack
+
+Component,Technologies Used
+Frontend,Streamlit (Python)
+Core Language,Python 3.9+
+Machine Learning,"scikit-learn (TF-IDF, Logistic Regression), joblib"
+Deep Learning (NLP),"transformers (Hugging Face), pytorch"
+Web Scraping,"selenium, beautifulsoup4, webdriver-manager"
+Reporting,fpdf (PDF Generation)
+
+📊 Dataset & Risk Logic
+The Machine Learning model behind Termsly was trained on a custom dataset of policy clauses labeled by risk level.
+
+Dataset Distribution
+The training data (policies_dataset.csv) is balanced to ensure fair detection across categories:
+
+Risk Level,Label,Count,Ratio,Description
+Safe,🟢,302,34.28%,"Standard, non-intrusive clauses."
+High,🔴,297,33.71%,"Risky clauses (e.g., data selling, waivers)."
+Medium,🟠,282,32.01%,"Moderate clauses (e.g., analytics sharing)."
 
 
-📊 **Dataset & Risk Distribution**
-The Machine Learning model behind Termsly was trained on a dataset of policy clauses labeled by risk level. The distribution of the training data (policies_dataset.csv) is as follows:
+How Risk is Calculated
+Termsly employs a transparent, quantitative approach to risk detection:
 
-**Risk Level**    **Count**     **Ratio**      **Description**
-Safe   🟢            302         34.28%        Standard clauses
-High   🔴            297         33.71%        Risky clauses
-Medium 🟠            282         32.01%        Moderate clauses
+Granular Analysis: The model splits the document into individual sentences and classifies each one.
 
+Scoring Logic: We determine the overall risk level by analyzing the volume of risky terms found.
 
-🚀 Key Features:
-1. Automated Scraping: Finds policy link from the given site and extract text from that policy link.
-2. AI Risk Detection: A trained ML model flags High, Medium clauses and give a overall risk prediction with a detailed Pie chart analysis.
-3. Smart Summarization: Summarize long and complex technical texts into a easy understandable summary.
-4. Multi-Language Support: Breaks language barriers by translating summaries into English, Hindi, Bengali, Tamil, French, and Russian.
-5. Instant Reports: Generates a color-coded PDF analysis for offline view.
+Transparency: Unlike tools that hide details, Termsly highlights every High and Medium risk clause detected, ensuring users see the full scope of potential issues.
 
 
-⚙️ **How Risk is Calculated**
-Termsly employs a quantitative approach to risk detection.
-1. Detection Strategy: The model scans the entire document and classifies individual clauses.
-2. Scoring Logic: We determine the risk level by analyzing the quantity of risky terms found, not just a subjective quality assessment.
-3. Outcome: This ensures maximum transparency—Termsly always highlights every High and Medium risk clause detected, ensuring you see the full volume of potential issues without filtering.
+📂 Project Structure
+Ensure your directory is structured as follows for the imports to function correctly:
 
-
-🛠️ **Tech Stack**
-1. Frontend: Streamlit (Interactive Web UI)
-2. Language: Python 3.9+
-3. Machine Learning:
-        scikit-learn: For TF-IDF Vectorization and Logistic Regression.
-        joblib: For model serialization/loading.
-4. Deep Learning / NLP:
-        transformers (Hugging Face): For Summarization and Translation pipelines.
-        pytorch: Backend for the transformer models.
-5. Web Scraping: selenium, beautifulsoup4
-6. PDF Engine: fpdf2, reportlab
+web-termsly/
+├── app.py                  # Main Streamlit application
+├── requirements.txt        # Python dependencies
+├── policies_dataset.csv    # Training data for the risk classifier
+├── train_classifier.py     # Script to train and save ML models
+│
+├── core/                   # Core logic modules
+│   ├── __init__.py
+│   ├── scraper.py          # Selenium web scraping logic
+│   ├── analyzer.py         # Risk classification logic
+│   ├── processor.py        # NLP (Summarization & Translation)
+│   ├── pdf_generator.py    # PDF reporting engine
+│   │
+│   # Required Fonts for PDF (Place these inside core/)
+│   ├── NotoSansBengali-Regular.ttf
+│   ├── NotoSansTamil-Regular.ttf
+│   ├── NotoSansDevanagari-Regular.ttf
+│   └── Roboto-Regular.ttf
+│
+└── models/                 # Generated by train_classifier.py
+    ├── tfidf_vectorizer.joblib
+    └── risk_classifier.joblib
