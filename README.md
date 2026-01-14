@@ -5,8 +5,6 @@ Here is a polished, professional, and fully structured README.md for Web Termsly
 
 I have consolidated the duplicate sections, formatted the dataset statistics into a clean table, added specific installation commands (which were missing), and improved the visual hierarchy.
 
-🛡️ Web Termsly | AI Risk Analysis Dashboard
-Web Termsly is an intelligent risk analysis tool designed to decode complex "Terms of Service" and "Privacy Policy" agreements. Legal documents are often too long and complex for the average user to read. Termsly solves this by using Natural Language Processing (NLP) and Machine Learning to scan websites, flag high-risk legal clauses, summarize content, and translate findings into regional languages.
 
 🚀 Key Features
 🌐 Automated Scraper: Utilizes Selenium and BeautifulSoup to autonomously navigate to a target domain, identify policy links, and extract relevant text.
