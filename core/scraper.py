@@ -3,11 +3,12 @@ from bs4 import BeautifulSoup
 import re
 from urllib.parse import urljoin, urlparse
 
-# --- New Selenium Imports ---
+# --- Selenium Imports ---
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 # -----------------------------
 
@@ -15,22 +16,37 @@ from webdriver_manager.chrome import ChromeDriverManager
 POLICY_KEYWORDS = ['privacy', 'terms', 'policy', 'legal', 'conditions', 'cookie']
 
 def get_selenium_driver():
-    """Initializes and returns a headless Chrome driver."""
+    """Initializes and returns a stealthy headless Chrome driver."""
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in the background
+    
+    # Use the new, much less detectable headless mode
+    chrome_options.add_argument("--headless=new")  
+    
+    # Standard server requirements
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
     
-    # This will automatically download and manage the correct chromedriver
+    # Anti-bot masking
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+    
+    # Emulate a real Windows 10 user
+    chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+    
     service = ChromeService(ChromeDriverManager().install())
     
     try:
         driver = webdriver.Chrome(service=service, options=chrome_options)
+        # Execute CDP command to remove webdriver property from navigator
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        })
     except Exception as e:
         print(f"Error initializing Selenium driver: {e}")
         print("Please ensure Google Chrome is installed on your system.")
         return None
+        
     return driver
 
 def score_link(href, text):
@@ -125,7 +141,6 @@ def find_policy_links(base_url):
             final_url = driver.current_url
             
             # Check if it's on the same website and not a 404
-            # (Note: This isn't a perfect 404 check, but it's good enough)
             if urlparse(final_url).netloc.endswith(domain) and "404" not in driver.title.lower():
                 print(f"Guess successful: {final_url}")
                 guessed_links.append(final_url)
@@ -146,7 +161,7 @@ def find_policy_links(base_url):
     return final_guessed
 
 def extract_text_from_url(url):
-    """Extracts text from a URL using Selenium."""
+    """Extracts text from a URL using Selenium with stealth and smart waits."""
     print(f"Extracting text from {url} with Selenium...")
     driver = get_selenium_driver()
     if driver is None:
@@ -154,16 +169,30 @@ def extract_text_from_url(url):
 
     try:
         driver.get(url)
-        time.sleep(2) # Give page time to load
+        
+        # Attempt to click "Accept all" if Google throws a cookie wall
+        try:
+            accept_button = driver.find_element(By.XPATH, "//button[contains(., 'Accept all') or contains(., 'I Agree')]")
+            accept_button.click()
+            time.sleep(2) # Wait for redirect after clicking
+        except:
+            pass # No cookie banner found, proceed normally
+        
+        # Smart Wait: Pause until the <body> tag actually contains text (up to 10 seconds)
+        WebDriverWait(driver, 10).until(
+            lambda d: len(d.find_element(By.TAG_NAME, "body").text) > 100
+        )
+        
+        # Give it 1 extra second for final styling/JS to settle
+        time.sleep(1) 
+        
         soup = BeautifulSoup(driver.page_source, 'lxml')
-        driver.quit() # Close the browser
+        driver.quit() 
     except Exception as e:
         print(f"Error fetching {url} with Selenium: {e}")
         driver.quit()
         return None, f"Error: Could not fetch URL {url}"
 
-    # --- (The rest of this function is the same as before) ---
-    
     # Remove script, style, nav, footer, header, forms, and cookie banners
     for element in soup(["script", "style", "nav", "footer", "header", "form"]):
         element.decompose()
@@ -195,6 +224,6 @@ def extract_text_from_url(url):
     full_text = re.sub(r'\s+', ' ', full_text).strip()
     
     if not full_text or len(full_text.split()) < 20:
-        return full_text, "Warning: Extracted text is very short."
+        return full_text, "Warning: Extracted text is very short. The site may be blocking automated extraction."
 
     return full_text, None

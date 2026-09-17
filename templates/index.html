@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Termsly | Risk Analysis Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="app-container" id="app-container">
+        <!-- Sidebar (Will NOT blur) -->
+        <div class="sidebar">
+            <div class="brand">
+                <img src="{{ url_for('static', filename='photo_1.png') }}" width="120" alt="Logo" style="display:block; margin: 0 auto 10px auto;">
+                <h2>Web Termsly AI</h2>
+                <hr>
+            </div>
+
+            <form id="analysis-form">
+                <div class="form-group">
+                    <label>Website Domain</label>
+                    <input type="text" id="domain-input" name="domain" placeholder="e.g. google.com" required>
+                    <small>Enter the full domain name.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Report Language</label>
+                    <select name="language" id="lang-input">
+                        <option value="Bengali">Bengali</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Tamil">Tamil</option>
+                        <option value="French">French</option>
+                        <option value="Russian">Russian</option>
+                    </select>
+                </div>
+
+                <hr>
+                <button type="submit" class="btn-primary">Run Analysis</button>
+            </form>
+
+            <div class="about-section">
+                <h3>About</h3>
+                <p>This tool uses NLP to scan Terms of Service agreements for high-risk clauses.</p>
+            </div>
+        </div>
+
+        <!-- Main Dashboard (Contains Overlay and Blurred Content) -->
+        <div class="main-content">
+
+            <!-- Loading Overlay scoped ONLY to main-content -->
+            <div class="loading-overlay hidden" id="loading-overlay">
+                <div class="minimal-spinner-container">
+                    <div class="st-spinner"></div>
+                    <div id="loading-text">Preparing analysis...</div>
+                </div>
+            </div>
+
+            <!-- Content wrapper that gets blurred -->
+            <div id="dashboard-content">
+                {% if error %}
+                <div class="alert alert-error">{{ error }}</div>
+                {% endif %} {% if not results and not error %}
+                <div class="welcome-card">
+                    <h2>Welcome to Web Termsly (A Website Risk Analyzer AI)</h2>
+                    <p>Please enter a domain in the sidebar to begin the risk assessment.</p>
+                </div>
+                {% elif results %}
+                <h1>Analysis Report: {{ domain }}</h1>
+                <p class="caption">Source: <a href="{{ results.url }}" target="_blank">{{ results.url }}</a></p>
+                <hr> {% if dominant_risk == 'High Risk' %}
+                <div class="alert alert-error">🚨 <strong>OVERALL STATUS: HIGH RISK</strong> (Majority of clauses are high risk)</div>
+                {% elif dominant_risk == 'Medium Risk' %}
+                <div class="alert alert-warning">⚠️ <strong>OVERALL STATUS: MEDIUM RISK</strong> (Majority of clauses are medium risk)</div>
+                {% else %}
+                <div class="alert alert-success">✅ <strong>OVERALL STATUS: SAFE</strong> (Majority of clauses are standard/safe)</div>
+                {% endif %}
+
+                <div class="grid-layout">
+                    <div class="col">
+                        <h3>Risk Distribution</h3>
+                        {% if chart %}
+                        <img src="data:image/png;base64,{{ chart }}" alt="Risk Chart" class="chart-img"> {% else %}
+                        <p>Insufficient data for chart.</p>
+                        {% endif %}
+
+                        <h3>Export</h3>
+                        <a href="/download/{{ domain }}" class="btn-primary" style="text-align:center; display:block; text-decoration:none;">📄 Download PDF Report</a>
+                    </div>
+
+                    <div class="col col-span-2">
+                        <h3>Executive Summary</h3>
+                        <div class="tabs">
+                            <input type="radio" name="tabs" id="tab1" checked>
+                            <label for="tab1">English</label>
+                            <div class="tab-content">
+                                <p>{{ results.summary }}</p>
+                            </div>
+
+                            <input type="radio" name="tabs" id="tab2">
+                            <label for="tab2">{{ results.language }}</label>
+                            <div class="tab-content">
+                                <p>{{ results.translated_summary }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+
+                <h3>🔍 Detected Clauses & Risk Factors</h3>
+                <div class="risk-details">
+                    {% set high_risks = [] %} {% set medium_risks = [] %} {% for h in results.highlights %} {% if "[HIGH RISK]" in h %} {% set _ = high_risks.append(h.replace("[HIGH RISK]", "").strip()) %} {% elif "[MEDIUM RISK]" in h %} {% set _ = medium_risks.append(h.replace("[MEDIUM
+                    RISK]", "").strip()) %} {% endif %} {% endfor %} {% if high_risks %}
+                    <div class="risk-group">
+                        <h4>🔴 High Risk Factors ({{ h_count }})</h4>
+                        <ul>
+                            {% for r in high_risks %}
+                            <li>{{ r }} <span class="badge badge-high">HIGH</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %} {% if medium_risks %}
+                    <div class="risk-group">
+                        <h4>🟠 Medium Risk Factors ({{ m_count }})</h4>
+                        <ul>
+                            {% for r in medium_risks %}
+                            <li>{{ r }} <span class="badge badge-medium">MEDIUM</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- JS for True Background Thread Polling -->
+    <script>
+        document.getElementById('analysis-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const domain = document.getElementById('domain-input').value.trim();
+            const lang = document.getElementById('lang-input').value;
+            const textElement = document.getElementById('loading-text');
+
+            // 1. Activate Blur and Show Spinner
+            document.getElementById('dashboard-content').classList.add('is-blurred');
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            textElement.innerText = "Initializing...";
+
+            // 2. Start the background task
+            const formData = new FormData();
+            formData.append('domain', domain);
+            formData.append('language', lang);
+
+            try {
+                let startRes = await fetch('/start', {
+                    method: 'POST',
+                    body: formData
+                });
+                let startData = await startRes.json();
+                let taskId = startData.task_id;
+
+                // 3. Poll server for REAL status every 500ms
+                const pollInterval = setInterval(async() => {
+                    let statusRes = await fetch('/status/' + taskId);
+                    let data = await statusRes.json();
+
+                    if (data.status) {
+                        textElement.innerText = data.status; // Real-time text update
+                    }
+
+                    // 4. When Python marks it complete, fetch final HTML
+                    if (data.complete) {
+                        clearInterval(pollInterval);
+                        let finalRes = await fetch('/result/' + taskId);
+                        let html = await finalRes.text();
+
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    }
+                }, 500);
+
+            } catch (err) {
+                document.getElementById('dashboard-content').classList.remove('is-blurred');
+                document.getElementById('loading-overlay').classList.add('hidden');
+                alert('Connection to server failed.');
+            }
+        });
+    </script>
+</body>
+
+</html>
