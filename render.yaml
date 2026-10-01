@@ -1,8 +1,6 @@
 services:
   - type: web
     name: web-termsly-ai
-    env: python
-    buildCommand: "./build.sh"
-    startCommand: "gunicorn app:app"
+    env: docker
     plan: free
     autoDeploy: true
